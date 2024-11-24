@@ -2,7 +2,8 @@ import argparse
 import json
 import pandas as pd
 import matplotlib.pyplot as plt
-from datetime import datetime
+from matplotlib.patches import Patch
+from datetime import datetime, timedelta
 import re
 
 
@@ -44,19 +45,35 @@ def preprocess_data(data):
     return pd.DataFrame(records)
 
 
-def plot_boxplots_per_weekday_hour(df, output_folder):
+def filter_data_by_timeframe(df, timeframe):
+    """
+    Filters the DataFrame based on the provided timeframe.
+    """
+    if timeframe == "all":
+        return df  # Return all data
+    days_mapping = {"6m": 180, "3m": 90, "1m": 30}
+    if timeframe in days_mapping:
+        cutoff_date = datetime.now().date() - timedelta(days=days_mapping[timeframe])
+        return df[df["date"] >= cutoff_date]
+    else:
+        raise ValueError("Invalid timeframe. Choose from 'all', '6m', '3m', or '1m'.")
+
+
+def plot_boxplots_per_weekday_hour(df, output_folder, timeframe):
     # Ensure output folder ends with a slash
     if not output_folder.endswith("/"):
         output_folder += "/"
 
     # Get the unique weekdays in order
     weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    df = df.copy()  # Ensure we're working on a copy to avoid warnings
     df["weekday"] = pd.Categorical(df["weekday"], categories=weekdays, ordered=True)
 
     for weekday in weekdays:
         weekday_data = df[df["weekday"] == weekday]
+
         if not weekday_data.empty:
-            # Group by date and hour to get individual study counts for each hour
+            # Group data by date and hour
             hourly_counts = weekday_data.groupby(["date", "hour"]).size().reset_index(name="count")
 
             # Pivot data for boxplot-friendly format
@@ -67,23 +84,42 @@ def plot_boxplots_per_weekday_hour(df, output_folder):
 
             # Create boxplot
             plt.figure(figsize=(12, 6))
-            plt.boxplot(boxplot_data, positions=range(24), showfliers=True, widths=0.6)
-            plt.title(f"Study Distribution per Hour for {weekday}")
+            plt.boxplot(boxplot_data, positions=range(24), showfliers=True, widths=0.6, patch_artist=True, boxprops=dict(facecolor="lightblue"))
+
+            # Finalize plot
+            plt.title(f"Study Distribution per Hour for {weekday} ({timeframe})")
             plt.xlabel("Hour of Day")
             plt.ylabel("Number of Studies")
             plt.xticks(range(24))
             plt.tight_layout()
-            output_file = f"{output_folder}{weekday}_boxplot.png"
+            output_file = f"{output_folder}{weekday}_boxplot_{timeframe}.png"
             plt.savefig(output_file)
             print(f"Saved boxplot for {weekday} to {output_file}")
             plt.close()
 
 
 if __name__ == "__main__":
-    # Parse command-line arguments
-    parser = argparse.ArgumentParser(description="Analyze studies per hour by weekday and create separate boxplots")
-    parser.add_argument("input_file", help="Path to the input JSON file")
-    parser.add_argument("output_folder", help="Folder to save the boxplot images")
+    # Define the command-line arguments
+    parser = argparse.ArgumentParser(
+        description="Analyze studies per hour by weekday and create separate boxplots",
+        epilog="Example usage: python3 script.py input.json output_folder/ --timeframe 3m"
+    )
+    parser.add_argument(
+        "input_file",
+        help="Path to the input JSON file containing study data"
+    )
+    parser.add_argument(
+        "output_folder",
+        help="Folder to save the boxplot images"
+    )
+    parser.add_argument(
+        "--timeframe",
+        choices=["all", "6m", "3m", "1m"],
+        default="3m",
+        help="Timeframe to filter data: 'all' (all data), '6m' (last six months), '3m' (last three months, default), '1m' (last one month)"
+    )
+    
+    # Parse arguments
     args = parser.parse_args()
 
     # Load data from JSON
@@ -98,5 +134,12 @@ if __name__ == "__main__":
         print("No valid datetime records found in the data. Exiting.")
         exit(1)
 
+    # Filter data by timeframe
+    try:
+        filtered_df = filter_data_by_timeframe(df, args.timeframe)
+    except ValueError as e:
+        print(e)
+        exit(1)
+
     # Plot separate boxplots for each weekday and hour
-    plot_boxplots_per_weekday_hour(df, args.output_folder)
+    plot_boxplots_per_weekday_hour(filtered_df, args.output_folder, args.timeframe)
