@@ -1,2 +1,2 @@
 # pacsalyzer
-Script for Analyzing a PACS
+Script for analyzing a PACS
