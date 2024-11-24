@@ -81,7 +81,6 @@ Tab-separated values listing institution names and their counts. Example:
 ```
 Institution Name	Count
 Example Hospital	20
-LUKAS KRANKKENHAUS	15
 Unknown	3
 ```
 
