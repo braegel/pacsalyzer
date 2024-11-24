@@ -130,11 +130,6 @@ All scripts expect the input JSON file to follow this format:
         "(0008,0080)": "(0008, 0080) Institution Name LO: 'Example Hospital'",
         "(0008,0020)": "(0008, 0020) Study Date DA: '20231101'",
         "(0008,0030)": "(0008, 0030) Study Time TM: '083000'"
-    },
-    {
-        "(0008,0080)": "(0008, 0080) Institution Name LO: 'LUKAS KRANKKENHAUS'",
-        "(0008,0020)": "(0008, 0020) Study Date DA: '20231015'",
-        "(0008,0030)": "(0008, 0030) Study Time TM: '091500'"
     }
 ]
 ```
