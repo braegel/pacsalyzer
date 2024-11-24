@@ -1,10 +1,3 @@
-Here’s the updated README, explaining all three scripts and their roles in the workflow.
-
----
-
-### README.md
-
-```markdown
 # DICOM PACS Analysis Toolkit
 
 This toolkit consists of three Python scripts for querying a PACS system, analyzing institution names, and visualizing study distributions by weekday and hour. These tools are designed to work together, allowing you to process DICOM metadata and extract meaningful insights.
@@ -191,14 +184,3 @@ Contributions are welcome! Feel free to open issues or submit pull requests.
 ## Author
 
 [Bernd Brägelmann](https://berndbraegelmann.de/)
-```
-
----
-
-### Key Additions:
-1. **Workflow Overview:** Explains how the three scripts work together.
-2. **Separate Script Sections:** Provides details, usage, arguments, and examples for each script.
-3. **Input/Output Examples:** Helps users understand the expected input and output.
-4. **Installation Instructions:** Includes requirements and dependencies for `query_pacs.py`.
-
-Let me know if further refinements are needed! 😊
