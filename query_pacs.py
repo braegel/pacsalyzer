@@ -3,6 +3,7 @@ from pynetdicom import AE, debug_logger
 from pynetdicom.sop_class import PatientRootQueryRetrieveInformationModelFind
 from pydicom.dataset import Dataset
 import json
+import sys
 
 # Optional: Enable debugging for troubleshooting
 # debug_logger()
@@ -60,19 +61,46 @@ def perform_c_find(ip, port, ae_title, output_file="query_results.json"):
         assoc.release()
     else:
         print("Failed to connect to the PACS server.")
+        sys.exit(1)
+
 
 if __name__ == "__main__":
-    # Parse command-line arguments
-    parser = argparse.ArgumentParser(description="DICOM C-FIND PACS Query Script")
-    parser.add_argument("ip", help="IP address of the PACS server")
-    parser.add_argument("port", type=int, help="Port of the PACS server")
-    parser.add_argument("aet", help="AE Title of the PACS server")
+    # Define the command-line arguments
+    parser = argparse.ArgumentParser(
+        description="DICOM C-FIND PACS Query Script",
+        epilog="Example usage: python3 script.py 127.0.0.1 11112 MY_AE_TITLE -o output.json"
+    )
     parser.add_argument(
-        "-o", "--output", default="query_results.json",
+        "ip",
+        help="IP address of the PACS server"
+    )
+    parser.add_argument(
+        "port",
+        type=int,
+        help="Port of the PACS server"
+    )
+    parser.add_argument(
+        "aet",
+        help="AE Title of the PACS server"
+    )
+    parser.add_argument(
+        "-o", "--output",
+        default="query_results.json",
         help="Output file name for the query results (default: query_results.json)"
     )
     
-    args = parser.parse_args()
+    # Parse arguments
+    try:
+        args = parser.parse_args()
+    except SystemExit as e:
+        # Handle parsing error or --help
+        if e.code != 0:
+            print("\nError: Invalid or missing arguments. Use -h for usage information.")
+        sys.exit(e.code)
     
     # Call the function with parsed arguments
-    perform_c_find(args.ip, args.port, args.aet, args.output)
+    try:
+        perform_c_find(args.ip, args.port, args.aet, args.output)
+    except Exception as e:
+        print(f"An error occurred during execution: {e}")
+        sys.exit(1)
