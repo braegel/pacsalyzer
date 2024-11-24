@@ -164,3 +164,9 @@ cython_debug/
 # emacs
 *~
 *#
+
+# json
+*.json
+
+*.png
+/plots
