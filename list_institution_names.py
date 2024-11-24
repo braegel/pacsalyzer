@@ -69,10 +69,10 @@ def count_institution_names(input_file, timeframe):
         # Sort the results by occurrence count in descending order
         sorted_counts = sorted(counts.items(), key=lambda x: x[1], reverse=True)
         
-        # Output results in tab-separated format
-        print("Institution Name\tCount")
+        # Output results in comma-separated format
+        print("Institution Name,Count")
         for institution, count in sorted_counts:
-            print(f"{institution}\t{count}")
+            print(f"{institution},{count}")
         
         return sorted_counts
     except FileNotFoundError:
@@ -90,7 +90,7 @@ if __name__ == "__main__":
     # Define command-line arguments
     parser = argparse.ArgumentParser(
         description="Count occurrences of (0008,0080) tags in a JSON file with optional timeframe filtering",
-        epilog="Example usage: python3 script.py input.json --timeframe 3m > output.tsv"
+        epilog="Example usage: python3 script.py input.json --timeframe 3m > output.csv"
     )
     parser.add_argument(
         "input_file",
