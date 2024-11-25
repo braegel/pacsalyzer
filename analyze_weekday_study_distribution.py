@@ -69,6 +69,25 @@ def separate_holidays(df, country="DE"):
     return non_holiday_df, holiday_df
 
 
+def get_top_10_counts(df, output_file=None):
+    """
+    Returns the top 10 highest counts by date, weekday, and hour.
+    Optionally saves the result to a CSV file.
+    """
+    top_counts = (
+        df.groupby(["date", "weekday", "hour"])
+        .size()
+        .reset_index(name="count")
+        .sort_values(by="count", ascending=False)
+        .head(10)
+        .reset_index(drop=True)  # Index zurücksetzen
+    )
+    if output_file:
+        top_counts.to_csv(output_file, index=False)
+        print(f"Top 10 counts saved to {output_file}")
+    return top_counts
+
+
 def plot_boxplots_per_weekday_hour(df, output_folder, timeframe, title_suffix=""):
     # Ensure output folder ends with a slash
     if not output_folder.endswith("/"):
@@ -111,7 +130,7 @@ def plot_boxplots_per_weekday_hour(df, output_folder, timeframe, title_suffix=""
 if __name__ == "__main__":
     # Define the command-line arguments
     parser = argparse.ArgumentParser(
-        description="Analyze studies per hour by weekday and create separate boxplots, including holiday analysis",
+        description="Analyze studies per hour by weekday, create separate boxplots, and identify top 10 study counts",
         epilog="Example usage: python3 script.py input.json output_folder/ --timeframe 3m --holiday-country DE"
     )
     parser.add_argument(
@@ -133,7 +152,11 @@ if __name__ == "__main__":
         default="DE",
         help="Country code for public holidays (default: DE for Germany)"
     )
-    
+    parser.add_argument(
+        "--top10-output",
+        help="File to save the top 10 highest counts (optional)"
+    )
+
     # Parse arguments
     args = parser.parse_args()
 
@@ -158,6 +181,12 @@ if __name__ == "__main__":
 
     # Separate holidays from the rest of the data
     non_holiday_df, holiday_df = separate_holidays(filtered_df, country=args.holiday_country)
+
+    # Generate top 10 counts
+    print("Generating top 10 highest counts...")
+    top_10 = get_top_10_counts(filtered_df, args.top10_output)
+    print("Top 10 counts:")
+    print(top_10)
 
     # Plot separate boxplots for weekdays (non-holidays)
     print("Generating boxplots for non-holiday data...")
