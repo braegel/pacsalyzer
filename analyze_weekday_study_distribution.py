@@ -2,8 +2,8 @@ import argparse
 import json
 import pandas as pd
 import matplotlib.pyplot as plt
-from matplotlib.patches import Patch
 from datetime import datetime, timedelta
+import holidays
 import re
 
 
@@ -59,7 +59,17 @@ def filter_data_by_timeframe(df, timeframe):
         raise ValueError("Invalid timeframe. Choose from 'all', '6m', '3m', or '1m'.")
 
 
-def plot_boxplots_per_weekday_hour(df, output_folder, timeframe):
+def separate_holidays(df, country="DE"):
+    """
+    Separates holiday data from the main DataFrame.
+    """
+    public_holidays = holidays.CountryHoliday(country)
+    holiday_df = df[df["date"].isin(public_holidays)]
+    non_holiday_df = df[~df["date"].isin(public_holidays)]
+    return non_holiday_df, holiday_df
+
+
+def plot_boxplots_per_weekday_hour(df, output_folder, timeframe, title_suffix=""):
     # Ensure output folder ends with a slash
     if not output_folder.endswith("/"):
         output_folder += "/"
@@ -87,12 +97,12 @@ def plot_boxplots_per_weekday_hour(df, output_folder, timeframe):
             plt.boxplot(boxplot_data, positions=range(24), showfliers=True, widths=0.6, patch_artist=True, boxprops=dict(facecolor="lightblue"))
 
             # Finalize plot
-            plt.title(f"Study Distribution per Hour for {weekday} ({timeframe})")
+            plt.title(f"Study Distribution per Hour for {weekday} ({timeframe}) {title_suffix}")
             plt.xlabel("Hour of Day")
             plt.ylabel("Number of Studies")
             plt.xticks(range(24))
             plt.tight_layout()
-            output_file = f"{output_folder}{weekday}_boxplot_{timeframe}.png"
+            output_file = f"{output_folder}{weekday}_boxplot_{timeframe}{title_suffix.replace(' ', '_')}.png"
             plt.savefig(output_file)
             print(f"Saved boxplot for {weekday} to {output_file}")
             plt.close()
@@ -101,8 +111,8 @@ def plot_boxplots_per_weekday_hour(df, output_folder, timeframe):
 if __name__ == "__main__":
     # Define the command-line arguments
     parser = argparse.ArgumentParser(
-        description="Analyze studies per hour by weekday and create separate boxplots",
-        epilog="Example usage: python3 script.py input.json output_folder/ --timeframe 3m"
+        description="Analyze studies per hour by weekday and create separate boxplots, including holiday analysis",
+        epilog="Example usage: python3 script.py input.json output_folder/ --timeframe 3m --holiday-country DE"
     )
     parser.add_argument(
         "input_file",
@@ -117,6 +127,11 @@ if __name__ == "__main__":
         choices=["all", "6m", "3m", "1m"],
         default="3m",
         help="Timeframe to filter data: 'all' (all data), '6m' (last six months), '3m' (last three months, default), '1m' (last one month)"
+    )
+    parser.add_argument(
+        "--holiday-country",
+        default="DE",
+        help="Country code for public holidays (default: DE for Germany)"
     )
     
     # Parse arguments
@@ -141,5 +156,16 @@ if __name__ == "__main__":
         print(e)
         exit(1)
 
-    # Plot separate boxplots for each weekday and hour
-    plot_boxplots_per_weekday_hour(filtered_df, args.output_folder, args.timeframe)
+    # Separate holidays from the rest of the data
+    non_holiday_df, holiday_df = separate_holidays(filtered_df, country=args.holiday_country)
+
+    # Plot separate boxplots for weekdays (non-holidays)
+    print("Generating boxplots for non-holiday data...")
+    plot_boxplots_per_weekday_hour(non_holiday_df, args.output_folder, args.timeframe, title_suffix="(Non-Holidays)")
+
+    # Plot separate boxplots for holidays
+    if not holiday_df.empty:
+        print("Generating boxplots for holiday data...")
+        plot_boxplots_per_weekday_hour(holiday_df, args.output_folder, args.timeframe, title_suffix="(Holidays)")
+    else:
+        print("No holiday data available for the selected timeframe and country.")
