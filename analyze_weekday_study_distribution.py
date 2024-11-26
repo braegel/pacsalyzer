@@ -115,31 +115,42 @@ def plot_boxplots_per_weekday_hour(df, output_folder, timeframe, title_suffix=""
         weekday_data = df[df["weekday"] == weekday]
 
         if not weekday_data.empty:
-            # Gruppierung und Zählung nach einzigartigen Studien
-            hourly_counts = weekday_data.groupby(["date", "hour"])["study_uid"].nunique().reset_index(name="study_count")
+            # Group data by date and hour, and count unique studies (StudyInstanceUID)
+            hourly_counts = (
+                weekday_data.groupby(["date", "hour"])["study_uid"]
+                .nunique()  # Count unique StudyInstanceUIDs
+                .reset_index(name="count")
+            )
 
-            # Anpassen der Daten für Boxplots
+            # Pivot data for boxplot-friendly format
             boxplot_data = []
             for hour in range(24):
-                hour_data = hourly_counts[hourly_counts["hour"] == hour]["study_count"]
+                hour_data = hourly_counts[hourly_counts["hour"] == hour]["count"]
                 boxplot_data.append(hour_data.values)
-    
+
             # Create boxplot
             plt.figure(figsize=(12, 6))
-            plt.boxplot(boxplot_data, positions=range(24), showfliers=True, widths=0.6, patch_artist=True, boxprops=dict(facecolor="lightblue"))
+            plt.boxplot(boxplot_data, positions=range(24), showfliers=True, widths=0.6, patch_artist=True)
+
+            # Add horizontal lines at y=6, 12, 18, and 21
+            for y_value in [6, 12, 18, 24]:
+                plt.axhline(y=y_value, color="gray", linestyle="--", linewidth=0.8)
+
+            # Set integer ticks for y-axis
+            plt.gca().yaxis.set_major_locator(plt.MaxNLocator(integer=True))
 
             # Finalize plot
             plt.title(f"Study Distribution per Hour for {weekday} ({timeframe}) {title_suffix}")
             plt.xlabel("Hour of Day")
-            plt.ylabel("Number of Studies")
+            plt.ylabel("Number of Unique Studies")
             plt.xticks(range(24))
+            plt.ylim(bottom=0)  # Ensure y-axis starts at 0
             plt.tight_layout()
             output_file = f"{output_folder}{weekday}_boxplot_{timeframe}{title_suffix.replace(' ', '_')}.png"
             plt.savefig(output_file)
             print(f"Saved boxplot for {weekday} to {output_file}")
             plt.close()
-
-
+            
 if __name__ == "__main__":
     # Define the command-line arguments
     parser = argparse.ArgumentParser(
