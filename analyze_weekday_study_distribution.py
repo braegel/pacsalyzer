@@ -92,7 +92,7 @@ def get_top_10_counts(df, output_file=None):
         df.groupby(["date", "weekday", "hour"])["study_uid"]
         .nunique()  # Anzahl der einzigartigen Studien
         .reset_index(name="study_count")
-        .sort_values(by="study_count", ascending=False)
+         .sort_values(by="study_count", ascending=False)
         .head(10)
         .reset_index(drop=True)
     )
@@ -150,7 +150,30 @@ def plot_boxplots_per_weekday_hour(df, output_folder, timeframe, title_suffix=""
             plt.savefig(output_file)
             print(f"Saved boxplot for {weekday} to {output_file}")
             plt.close()
-            
+def calculate_median_per_hour_weekday(df, output_file):
+    """
+    Berechnet den Median der Anzahl von Studien pro Stunde und Wochentag
+    und speichert die Tabelle als CSV.
+    """
+    # Gruppierung nach Wochentag, Datum und Stunde, um tägliche Studienanzahlen zu ermitteln
+    daily_hourly_counts = (
+        df.groupby(["weekday", "date", "hour"])["study_uid"]
+        .nunique()
+        .reset_index(name="daily_count")
+    )
+
+    # Median der Studienanzahl pro Stunde für jeden Wochentag
+    median_table = (
+        daily_hourly_counts.groupby(["weekday", "hour"])["daily_count"]
+        .median()
+        .unstack(level="hour")
+        .fillna(0)  # Fehlende Werte mit 0 auffüllen
+    )
+
+    # CSV speichern
+    median_table.to_csv(output_file)
+    print(f"Median-Tabelle gespeichert unter: {output_file}")
+    
 if __name__ == "__main__":
     # Define the command-line arguments
     parser = argparse.ArgumentParser(
@@ -222,3 +245,16 @@ if __name__ == "__main__":
         plot_boxplots_per_weekday_hour(holiday_df, args.output_folder, args.timeframe, title_suffix="(Holidays)")
     else:
         print("No holiday data available for the selected timeframe and country.")
+
+    # Load data and preprocess as before
+    data = load_data(args.input_file)
+    df = preprocess_data(data)
+
+    # Filter data by timeframe
+    filtered_df = filter_data_by_timeframe(df, args.timeframe)
+
+    # Calculate median per hour per weekday
+    output_csv = f"{args.output_folder}/median_per_hour_weekday.csv"
+    median_table = calculate_median_per_hour_weekday(filtered_df, output_csv)
+    calculate_median_per_hour_weekday(filtered_df, output_csv)    
+        
