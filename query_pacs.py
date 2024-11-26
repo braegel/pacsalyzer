@@ -30,6 +30,7 @@ def perform_c_find(ip, port, ae_title, output_file="query_results.json"):
         query.StudyTime = ""               # (0008,0030): Study Time
         query.StudyDescription = ""        # (0008,1030): Study Description
         query.Modality = ""                # (0008,0060): Modality
+        query.StudyInstanceUID = ""  # (0020,000D): Study Instance UID
         
         # Send the C-FIND query
         responses = assoc.send_c_find(query, PatientRootQueryRetrieveInformationModelFind)
@@ -40,12 +41,13 @@ def perform_c_find(ip, port, ae_title, output_file="query_results.json"):
                 if identifier:
                     # Convert DICOM DataElement values to strings or None
                     result = {
-                        "(0010,0020)": str(identifier.get((0x0010, 0x0020), "")),  # Patient ID
-                        "(0008,0080)": str(identifier.get((0x0008, 0x0080), "")),  # Institution Name
-                        "(0008,0020)": str(identifier.get((0x0008, 0x0020), "")),  # Study Date
-                        "(0008,0030)": str(identifier.get((0x0008, 0x0030), "")),  # Study Time
-                        "(0008,1030)": str(identifier.get((0x0008, 0x1030), "")),  # Study Description
-                        "(0008,0060)": str(identifier.get((0x0008, 0x0060), "")),  # Modality
+                        "(0010,0020)": str(identifier.get((0x0010, 0x0020), "")).strip(),  # Patient ID
+                        "(0008,0080)": str(identifier.get((0x0008, 0x0080), "")).strip(),  # Institution Name
+                        "(0008,0020)": str(identifier.get((0x0008, 0x0020), "")).strip(),  # Study Date
+                        "(0008,0030)": str(identifier.get((0x0008, 0x0030), "")).strip(),  # Study Time
+                        "(0008,1030)": str(identifier.get((0x0008, 0x1030), "")).strip(),  # Study Description
+                        "(0008,0060)": str(identifier.get((0x0008, 0x0060), "")).strip(),  # Modality
+                        "(0020,000D)": str(identifier.get((0x0020, 0x000D), "")).strip(),  # Study Instance UID
                     }
                     results.append(result)
         

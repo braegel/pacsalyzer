@@ -9,11 +9,22 @@ import re
 
 def clean_value(value):
     """
-    Extracts the raw value from a formatted DICOM tag value string, e.g., "DA: '20241006'" -> "20241006".
+    Extracts the raw value from a formatted DICOM tag value string.
+    Handles strings like:
+    "(0020, 000D) Study Instance UID UI: 1.2.40.0.13.0.11.5093.2.2011008744.25997.20110225112319"
+    -> "1.2.40.0.13.0.11.5093.2.2011008744.25997.20110225112319"
     """
+    # Extract value wrapped in single quotes
     match = re.search(r"'([^']*)'", value)
-    return match.group(1) if match else None
-
+    if match:
+        return match.group(1)
+    
+    # Extract value after "UI:" or other prefixes
+    match = re.search(r'UI:\s*([^\s]+)', value)
+    if match:
+        return match.group(1)
+    
+    return None
 
 def load_data(input_file):
     try:
@@ -24,26 +35,29 @@ def load_data(input_file):
         print(f"Error reading the input file: {e}")
         return []
 
-
 def preprocess_data(data):
     records = []
     for entry in data:
-        # Clean and extract date and time values
         study_date = clean_value(entry.get("(0008,0020)", ""))
         study_time = clean_value(entry.get("(0008,0030)", ""))
-        if study_date and study_time:
+        study_uid = clean_value(entry.get("(0020,000D)", ""))  # StudyInstanceUID
+
+        # Debugging
+        # print(f"Study Date: {study_date}, Study Time: {study_time}, Study UID: {study_uid}")
+
+        if study_date and study_time and study_uid:
             try:
                 # Combine date and time into a datetime object
                 datetime_obj = datetime.strptime(study_date + study_time.split(".")[0], "%Y%m%d%H%M%S")
                 records.append({
+                    "study_uid": study_uid,
                     "weekday": datetime_obj.strftime("%A"),
                     "hour": datetime_obj.hour,
                     "date": datetime_obj.date()
                 })
-            except ValueError:
-                print(f"Invalid date/time format for entry: {entry}")
+            except ValueError as e:
+                print(f"Invalid date/time format for entry: {entry}. Error: {e}")
     return pd.DataFrame(records)
-
 
 def filter_data_by_timeframe(df, timeframe):
     """
@@ -69,24 +83,23 @@ def separate_holidays(df, country="DE"):
     return non_holiday_df, holiday_df
 
 
+
 def get_top_10_counts(df, output_file=None):
     """
-    Returns the top 10 highest counts by date, weekday, and hour.
-    Optionally saves the result to a CSV file.
+    Returns the top 10 highest counts of unique studies by date, weekday, and hour.
     """
     top_counts = (
-        df.groupby(["date", "weekday", "hour"])
-        .size()
-        .reset_index(name="count")
-        .sort_values(by="count", ascending=False)
+        df.groupby(["date", "weekday", "hour"])["study_uid"]
+        .nunique()  # Anzahl der einzigartigen Studien
+        .reset_index(name="study_count")
+        .sort_values(by="study_count", ascending=False)
         .head(10)
-        .reset_index(drop=True)  # Index zurücksetzen
+        .reset_index(drop=True)
     )
     if output_file:
         top_counts.to_csv(output_file, index=False)
         print(f"Top 10 counts saved to {output_file}")
     return top_counts
-
 
 def plot_boxplots_per_weekday_hour(df, output_folder, timeframe, title_suffix=""):
     # Ensure output folder ends with a slash
@@ -102,15 +115,15 @@ def plot_boxplots_per_weekday_hour(df, output_folder, timeframe, title_suffix=""
         weekday_data = df[df["weekday"] == weekday]
 
         if not weekday_data.empty:
-            # Group data by date and hour
-            hourly_counts = weekday_data.groupby(["date", "hour"]).size().reset_index(name="count")
+            # Gruppierung und Zählung nach einzigartigen Studien
+            hourly_counts = weekday_data.groupby(["date", "hour"])["study_uid"].nunique().reset_index(name="study_count")
 
-            # Pivot data for boxplot-friendly format
+            # Anpassen der Daten für Boxplots
             boxplot_data = []
             for hour in range(24):
-                hour_data = hourly_counts[hourly_counts["hour"] == hour]["count"]
+                hour_data = hourly_counts[hourly_counts["hour"] == hour]["study_count"]
                 boxplot_data.append(hour_data.values)
-
+    
             # Create boxplot
             plt.figure(figsize=(12, 6))
             plt.boxplot(boxplot_data, positions=range(24), showfliers=True, widths=0.6, patch_artist=True, boxprops=dict(facecolor="lightblue"))
